@@ -23,42 +23,26 @@ from django.views.generic import TemplateView
 
 from modulo_gestion_qr import views
 from modulo_gestion_qr.forms import CustomLoginForm
-from modulo_gestion_qr.views import (
-    ClienteCreateView,
-    ClienteSuccessView,
-    ProductoCreateView,
-    ProductoSuccessView,
-    ProductoUpdateView,
-    obtener_templates_por_cliente,
-    index,
-    ver_informacion_qr,
-    ver_seriales,
-    dashboard,
-    custom_logout,
-    exportar_csv,
-    crear_solicitud,
-)
 
-from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('dashboard/', dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('login/', auth_views.LoginView.as_view(
         template_name='login.html', 
         authentication_form=CustomLoginForm
     ), name='login'),  # Vista personalizada para login
-    path('logout/', custom_logout, name='logout'),  # Vista de logout personalizada
+    path('logout/', views.custom_logout, name='logout'),  # Vista de logout personalizada
     path('', views.generar_seriales, name='home'),  # Redirige raíz a asociar_seriales
     #path('seriales', views.ver_seriales, name='ver_seriales'),
     path('asociar/', views.generar_seriales, name='generar_seriales'),
     path('success/', views.serial_success, name='serial_success'),
     path('<str:cliente_slug>/qr/', views.ver_informacion_qr, name='ver_informacion_qr'),
-    path('cliente/nuevo/', ClienteCreateView.as_view(), name='crear_cliente'),
-    path('cliente/exito/<int:pk>/', ClienteSuccessView.as_view(), name='cliente_success'),
-    path('producto/nuevo/', ProductoCreateView.as_view(), name='crear_producto'),
-    path('producto/exito/<int:pk>/', ProductoSuccessView.as_view(), name='producto_success'),
-    path('index/', index, name='index'),  # Define la vista principal
+    path('cliente/nuevo/', views.ClienteCreateView.as_view(), name='crear_cliente'),
+    path('cliente/exito/<int:pk>/', views.ClienteSuccessView.as_view(), name='cliente_success'),
+    path('producto/nuevo/', views.ProductoCreateView.as_view(), name='crear_producto'),
+    path('producto/exito/<int:pk>/', views.ProductoSuccessView.as_view(), name='producto_success'),
+    path('index/', views.index, name='index'),  # Define la vista principal
     #path('actualizar_seriales/', views.actualizar_seriales, name='actualizar_seriales'),
     path('api/productos/<int:cliente_id>/', views.productos_por_cliente, name='productos_por_cliente'),
     path('actualizar/', views.asociar_seriales, name='asociar_seriales'),
@@ -71,8 +55,8 @@ urlpatterns = [
     path('listado-templates/', views.listado_templates, name='listado_templates'),  
     path('api/obtener_campos_seriales/', views.obtener_campos_seriales, name='obtener_campos_seriales'),
     path('producto/editar/<int:pk>/', views.editar_producto, name='editar_producto'),
-    path('api/templates/<int:cliente_id>/', obtener_templates_por_cliente, name='obtener_templates_por_cliente'),
-    path('exportar_csv/', exportar_csv, name='exportar_csv'),
+    path('api/templates/<int:cliente_id>/', views.obtener_templates_por_cliente, name='obtener_templates_por_cliente'),
+    path('exportar_csv/', views.exportar_csv, name='exportar_csv'),
     path('solicitud/nueva/', views.crear_solicitud, name='crear_solicitud'),
     path('landing/<str:codigo>/', views.landing_solicitud, name='landing_solicitud'),
     path('solicitud/<int:solicitud_id>/editar/', views.editar_solicitud, name='editar_solicitud'),
@@ -82,6 +66,13 @@ urlpatterns = [
     path('entrega/', views.formulario_entrega, name='formulario_entrega'),
     path('api/solicitud_por_rango/', views.solicitud_por_rango, name='solicitud_por_rango'),
     path("buscar-nit/", views.buscar_nit, name="buscar_nit"),
+    path('asignar-serial-interno/', views.asignar_seriales_interno, name='asignar_serial_interno'),
+    path('serial-interno/<str:serial_interno>/', views.landing_serial_interno, name='landing_serial_interno'),
+    path('seriales/por-producto/<int:producto_id>/', views.seriales_por_producto, name='seriales_por_producto'),
+    path('seriales/asignados-a/<int:serial_id>/', views.seriales_asignados_a, name='seriales_asignados_a'),
+    path('asociar/por-serial-interno/', views.asociar_por_serial_interno, name='asociar_por_serial_interno'),
+
+   
     path('<slug:cliente_slug>/', views.crear_template_cliente, name='template_cliente'),
 
 

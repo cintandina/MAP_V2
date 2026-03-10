@@ -54,11 +54,14 @@ class Serial(models.Model):
         ('cancelado', 'Cancelado'),
     ]
 
-    serial = models.CharField(max_length=100, unique=True)
+    serial = models.CharField(max_length=100)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     url = models.URLField(max_length=500, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='programado')
+    
+    class Meta:
+        unique_together = ('serial', 'producto')  
 
     # Campos extra
     campo1 = models.TextField(blank=True, null=True)
@@ -242,3 +245,60 @@ class User(AbstractUser):
         return self.is_superuser or self.has_rol('Administrador')
 
 
+# Modelo manejo de seriales por caja o lote (SerialInterno)
+class SerialInterno(models.Model):
+    serial = models.CharField(max_length=100, unique=True)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    url = models.URLField(blank=True)
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.serial
+
+class AsignacionSerialInterno(models.Model):
+    serial_interno = models.ForeignKey(SerialInterno, on_delete=models.CASCADE)
+    serial_cliente = models.ForeignKey(Serial, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField(default=1)  # cantidad de seriales del cliente asignados a este interno
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    from django.conf import settings
+
+    asignado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        unique_together = ('serial_interno', 'serial_cliente')
+
+
+class AsignacionSerialCliente(models.Model):
+    """
+    Relaciona un Serial 'interno' (crear_solicitud) con seriales de cliente (otros productos)
+    """
+    serial_maestro = models.ForeignKey(
+        Serial,
+        on_delete=models.CASCADE,
+        related_name='asignaciones_maestro',
+        help_text="Serial con template crear_solicitud (el interno)"
+    )
+    serial_asignado = models.ForeignKey(
+        Serial,
+        on_delete=models.CASCADE,
+        related_name='asignaciones_cliente',
+        help_text="Serial del producto del cliente"
+    )
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+    asignado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        unique_together = ('serial_maestro', 'serial_asignado')
+
+    def __str__(self):
+        return f"{self.serial_maestro.serial} → {self.serial_asignado.serial}"

@@ -13,7 +13,10 @@ from .models import (
     TemplateCliente,
     Ubicacion,
     User,
+    AsignacionSerialCliente
 )
+
+admin.site.register(AsignacionSerialCliente)
 
 logger = logging.getLogger("storages")
 

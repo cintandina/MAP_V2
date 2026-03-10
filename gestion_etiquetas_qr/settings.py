@@ -282,6 +282,7 @@ LANDING_TEMPLATE_EXCLUDE = [
     'serial_success.html',
     'ver_seriales.html',
     'ver_solicitud.html',
+    'asignar_serial_interno.html',
     # agrega otros que no quieras mostrar
 ]
 

@@ -4,257 +4,385 @@
 {% block title %}{% trans "Asociar Códigos QR" %}{% endblock %}
 
 {% block content %}
-<div class="flex justify-center items-center min-h-screen bg-gray-100">
+<div class="flex justify-center items-center min-h-screen bg-gray-100 p-4">
   <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full max-w-4xl">
-    <!-- Título -->
+
     <h1 class="text-3xl font-bold text-green-700 text-center mb-6">
       {% trans "Asociar Códigos QR" %}
     </h1>
 
-    <!-- Mensajes -->
     {% if messages %}
       <div class="mb-4">
         {% for message in messages %}
-          <div class="text-center font-semibold
-            {% if message.tags == 'success' %} text-green-600
-            {% elif message.tags == 'warning' %} text-yellow-600
-            {% else %} text-red-600 {% endif %}">
+          <div class="text-center font-semibold p-2 rounded
+            {% if message.tags == 'success' %}bg-green-100 text-green-600
+            {% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-600
+            {% else %}bg-red-100 text-red-600{% endif %}">
             {{ message }}
           </div>
         {% endfor %}
       </div>
     {% endif %}
 
-    <!-- Advertencia dinámica -->
     <div id="dynamicWarning" class="mb-4 text-center text-yellow-600 font-semibold hidden"></div>
 
-    <!-- Errores generales -->
     {% if form.non_field_errors %}
       <div class="mb-4 text-center text-red-600 font-semibold">
         {{ form.non_field_errors|first }}
       </div>
     {% endif %}
 
-    <!-- Formulario -->
-    <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {% csrf_token %}
+    <!-- ══════════════════════════════════════════
+         SELECTOR DE MODO
+    ══════════════════════════════════════════ -->
+    <div class="flex gap-3 mb-6">
+      <button type="button" id="btn-modo-rango"
+              onclick="setModo('rango')"
+              class="flex-1 py-2.5 px-4 rounded-lg font-semibold border-2 border-green-600 bg-green-600 text-white transition">
+        📋 Por Rango Manual
+      </button>
+      <button type="button" id="btn-modo-interno"
+              onclick="setModo('interno')"
+              class="flex-1 py-2.5 px-4 rounded-lg font-semibold border-2 border-gray-300 text-gray-600 transition">
+        🔗 Por Serial Interno
+      </button>
+    </div>
 
-      <!-- Rango de Seriales -->
-      <div>
-        <label for="{{ form.desde.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Desde" %}</label>
-        <input
-          id="{{ form.desde.id_for_label }}"
-          name="{{ form.desde.name }}"
-          type="number"
-          class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500 {% if form.desde.errors %}border-red-500{% endif %}"
-          placeholder="{% trans 'Serial inicial' %}"
-          value="{{ form.desde.value|default:'' }}"
-        >
-        {% if form.desde.errors %}
-          <p class="text-red-500 text-sm mt-1">{{ form.desde.errors|first }}</p>
-        {% endif %}
-      </div>
+    <!-- ══════════════════════════════════════════
+         MODO 1: RANGO MANUAL (formulario original)
+    ══════════════════════════════════════════ -->
+    <div id="modo-rango">
+      <form method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% csrf_token %}
 
-      <div>
-        <label for="{{ form.hasta.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Hasta" %}</label>
-        <input
-          id="{{ form.hasta.id_for_label }}"
-          name="{{ form.hasta.name }}"
-          type="number"
-          class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500 {% if form.hasta.errors %}border-red-500{% endif %}"
-          placeholder="{% trans 'Serial final' %}"
-          value="{{ form.hasta.value|default:'' }}"
-        >
-        {% if form.hasta.errors %}
-          <p class="text-red-500 text-sm mt-1">{{ form.hasta.errors|first }}</p>
-        {% endif %}
-      </div>
-
-      <!-- Botón Cargar Campos -->
-      <div class="md:col-span-2 flex justify-center mt-2">
-        <button type="button" id="cargarCampos"
-          class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-          {% trans "Cargar Campos" %}
-        </button>
-      </div>
-
-      <!-- Campos extra + Solicitud + Estado (inicialmente oculto) -->
-      <div id="camposExtras" class="hidden md:col-span-2">
-        <!-- Solicitud -->
         <div>
-          <label for="{{ form.solicitud.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Solicitud" %}</label>
-          {{ form.solicitud|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
-          {% if form.solicitud.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.solicitud.errors|first }}</p>
-          {% endif %}
+          <label for="{{ form.desde.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Desde" %}</label>
+          <input id="{{ form.desde.id_for_label }}" name="{{ form.desde.name }}" type="number"
+                 class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500 {% if form.desde.errors %}border-red-500{% endif %}"
+                 placeholder="{% trans 'Serial inicial' %}" value="{{ form.desde.value|default:'' }}">
+          {% if form.desde.errors %}<p class="text-red-500 text-sm mt-1">{{ form.desde.errors|first }}</p>{% endif %}
         </div>
 
-        <!-- Campos extra -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-          {% for field in form %}
-            {% if field.name|slice:"0:5" == "campo" %}
-              <div>
-                <label id="label_{{ field.name }}" for="{{ field.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
-                  {% trans "Campo" %} {{ field.name|slice:"5:" }}
-                </label>
-                {{ field|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
-                {% if field.errors %}
-                  <p class="text-red-500 text-sm mt-1">{{ field.errors|first }}</p>
-                {% endif %}
-              </div>
-            {% endif %}
-          {% endfor %}
+        <div>
+          <label for="{{ form.hasta.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Hasta" %}</label>
+          <input id="{{ form.hasta.id_for_label }}" name="{{ form.hasta.name }}" type="number"
+                 class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500 {% if form.hasta.errors %}border-red-500{% endif %}"
+                 placeholder="{% trans 'Serial final' %}" value="{{ form.hasta.value|default:'' }}">
+          {% if form.hasta.errors %}<p class="text-red-500 text-sm mt-1">{{ form.hasta.errors|first }}</p>{% endif %}
         </div>
 
-        <!-- Estado -->
-        <div class="mt-4">
-          <label for="{{ form.estado.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Estado" %}</label>
-          {{ form.estado|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
-          {% if form.estado.errors %}
-            <p class="text-red-500 text-sm mt-1">{{ form.estado.errors|first }}</p>
-          {% endif %}
-        </div>
-
-        <!-- Botón Asociar -->
-        <div class="flex justify-center mt-6">
-          <button type="submit"
-            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-            {% trans "Asociar" %}
+        <div class="md:col-span-2 flex justify-center mt-2">
+          <button type="button" id="cargarCampos"
+                  class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md">
+            {% trans "Cargar Campos" %}
           </button>
         </div>
+
+        <div id="camposExtras" class="hidden md:col-span-2">
+          <div>
+            <label for="{{ form.solicitud.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Solicitud" %}</label>
+            {{ form.solicitud|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
+            {% if form.solicitud.errors %}<p class="text-red-500 text-sm mt-1">{{ form.solicitud.errors|first }}</p>{% endif %}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            {% for field in form %}
+              {% if field.name|slice:"0:5" == "campo" %}
+                <div>
+                  <label id="label_{{ field.name }}" for="{{ field.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {% trans "Campo" %} {{ field.name|slice:"5:" }}
+                  </label>
+                  {{ field|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
+                  {% if field.errors %}<p class="text-red-500 text-sm mt-1">{{ field.errors|first }}</p>{% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="mt-4">
+            <label for="{{ form.estado.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">{% trans "Estado" %}</label>
+            {{ form.estado|add_class:"block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500" }}
+          </div>
+
+          <div class="flex justify-center mt-6">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md">
+              {% trans "Asociar" %}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         MODO 2: SERIAL INTERNO
+    ══════════════════════════════════════════ -->
+    <div id="modo-interno" class="hidden">
+
+      <!-- Paso 1: Seleccionar producto interno -->
+      <div class="border border-blue-200 rounded-lg p-5 bg-blue-50 mb-5">
+        <h2 class="text-lg font-bold text-blue-700 mb-3">Paso 1 — Seleccionar Producto Interno</h2>
+        <select id="si-producto-selector"
+                class="block w-full p-2.5 border border-blue-300 rounded-lg bg-white focus:ring-blue-500 focus:border-blue-500">
+          <option value="">— Seleccione el producto interno —</option>
+          {% for p in todos_productos %}
+            <option value="{{ p.id }}">{{ p.nombre }}{% if p.cliente %} ({{ p.cliente.nombre }}){% endif %}</option>
+          {% endfor %}
+        </select>
       </div>
-    </form>
+
+      <!-- Paso 2: Seleccionar serial maestro -->
+      <div id="si-seriales-container" class="border border-gray-200 rounded-lg p-5 mb-5 hidden">
+        <h2 class="text-lg font-bold text-gray-700 mb-3">Paso 2 — Seleccionar Serial Interno (Maestro)</h2>
+        <select id="si-serial-maestro"
+                class="block w-full p-2.5 border border-gray-300 rounded-lg bg-white focus:ring-green-500 focus:border-green-500">
+          <option value="">— Seleccione un serial —</option>
+        </select>
+        <p class="text-xs text-gray-400 mt-1">
+          Seriales disponibles: <span id="si-total-internos">0</span>
+        </p>
+      </div>
+
+      <!-- Paso 3: Ver seriales asignados y asociar solicitud -->
+      <div id="si-asignados-container" class="border border-gray-200 rounded-lg p-5 hidden">
+        <h2 class="text-lg font-bold text-gray-700 mb-3">
+          Paso 3 — Seriales asignados a este serial interno
+        </h2>
+
+        <!-- Tabla de seriales asignados -->
+        <div class="overflow-auto max-h-64 mb-5 rounded border border-gray-200">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="p-2 text-left border-b">Serial</th>
+                <th class="p-2 text-left border-b">Producto</th>
+                <th class="p-2 text-left border-b">Estado</th>
+                <th class="p-2 text-left border-b">Solicitud actual</th>
+              </tr>
+            </thead>
+            <tbody id="si-tabla-body">
+              <tr><td colspan="4" class="p-3 text-center text-gray-400">Seleccione un serial maestro</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="text-sm text-gray-500 mb-4">
+          Total seriales asignados: <span id="si-total-asignados" class="font-bold text-green-700">0</span>
+        </p>
+
+        <!-- Formulario para asociar solicitud a todos los seriales asignados -->
+        <form method="POST" action="{% url 'asociar_por_serial_interno' %}">
+          {% csrf_token %}
+          <input type="hidden" name="serial_maestro_id" id="si-serial-maestro-id" value="" />
+
+          <div class="mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Solicitud a asociar</label>
+            <select name="solicitud_id" id="si-solicitud"
+                    class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500">
+              <option value="">— Seleccione una solicitud —</option>
+              {% for s in todas_solicitudes %}
+                <option value="{{ s.id }}">{{ s.codigo }} — {{ s.razon_social }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Estado</label>
+            <select name="estado"
+                    class="block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500">
+              {% for val, label in estados %}
+                <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex justify-center">
+            <button type="submit"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md">
+              Asociar Solicitud a todos los seriales
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- Script para cargar campos al hacer clic en "Cargar Campos" -->
 <script>
+// ── Cambio de modo ────────────────────────────────────────────────────────
+function setModo(modo) {
+  const btnRango    = document.getElementById('btn-modo-rango');
+  const btnInterno  = document.getElementById('btn-modo-interno');
+  const modoRango   = document.getElementById('modo-rango');
+  const modoInterno = document.getElementById('modo-interno');
+
+  if (modo === 'rango') {
+    modoRango.classList.remove('hidden');
+    modoInterno.classList.add('hidden');
+    btnRango.classList.add('bg-green-600', 'text-white', 'border-green-600');
+    btnRango.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
+    btnInterno.classList.remove('bg-green-600', 'text-white', 'border-green-600');
+    btnInterno.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+  } else {
+    modoRango.classList.add('hidden');
+    modoInterno.classList.remove('hidden');
+    btnInterno.classList.add('bg-green-600', 'text-white', 'border-green-600');
+    btnInterno.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
+    btnRango.classList.remove('bg-green-600', 'text-white', 'border-green-600');
+    btnRango.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
-  const desdeEl = document.getElementById('id_desde');
-  const hastaEl = document.getElementById('id_hasta');
-  const btn = document.getElementById('cargarCampos');
-  const extras = document.getElementById('camposExtras');
-  const sel = document.getElementById('id_solicitud');
-  const fields = document.querySelectorAll('[id^=id_campo], #id_estado');
+
+  // ── MODO RANGO: lógica original ──────────────────────────────────────
+  const desdeEl   = document.getElementById('id_desde');
+  const hastaEl   = document.getElementById('id_hasta');
+  const btn       = document.getElementById('cargarCampos');
+  const extras    = document.getElementById('camposExtras');
+  const sel       = document.getElementById('id_solicitud');
+  const fields    = document.querySelectorAll('[id^=id_campo], #id_estado');
   const warningDiv = document.getElementById('dynamicWarning');
 
   function val(el) { return (el && el.value) ? el.value.trim() : ''; }
   function bothRangeFilled() { return !!(val(desdeEl) && val(hastaEl)); }
 
-  // Asegura opción vacía “-----” al inicio y sin selección por defecto
   (function ensureSolicitudPlaceholder() {
     if (!sel) return;
     const hasBlank = Array.from(sel.options).some(o => o.value === '');
     if (!hasBlank) {
       const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = '-----';
+      opt.value = ''; opt.textContent = '-----';
       sel.insertBefore(opt, sel.firstChild);
     }
-    sel.value = ''; // sin selección inicial
+    sel.value = '';
   })();
 
-  // Habilita/desabilita el botón según el rango
-  function toggleButton() {
-    if (btn) btn.disabled = !bothRangeFilled();
-  }
+  function toggleButton() { if (btn) btn.disabled = !bothRangeFilled(); }
   toggleButton();
   if (desdeEl) desdeEl.addEventListener('input', toggleButton);
   if (hastaEl) hastaEl.addEventListener('input', toggleButton);
 
-  // Cargar campos al hacer clic en "Cargar Campos"
   if (btn) {
     btn.addEventListener('click', function () {
       const desde = val(desdeEl);
       const hasta = val(hastaEl);
+      if (!bothRangeFilled()) { alert('Complete el rango de seriales.'); return; }
 
-      if (!bothRangeFilled()) {
-        alert('Por favor, complete el rango de seriales antes de continuar.');
-        return;
-      }
-
-      // Inferir la solicitud a partir del rango
       fetch(`/api/solicitud_por_rango/?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`)
         .then(r => r.json().then(data => ({ ok: r.ok, data })))
         .then(({ ok, data }) => {
-          if (!ok) throw new Error(data.error || 'Error al obtener las solicitudes.');
+          if (!ok) throw new Error(data.error || 'Error al obtener solicitudes.');
 
-          // Limpiar y poblar el select con todas las solicitudes
           sel.innerHTML = '';
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = '-----';
-          sel.appendChild(placeholder);
-
+          const ph = document.createElement('option');
+          ph.value = ''; ph.textContent = '-----';
+          sel.appendChild(ph);
           data.solicitudes.forEach(sol => {
             const opt = document.createElement('option');
-            opt.value = sol.id;
-            opt.textContent = sol.label;
+            opt.value = sol.id; opt.textContent = sol.label;
             sel.appendChild(opt);
           });
+          if (data.solicitud_seleccionada) sel.value = data.solicitud_seleccionada.id;
 
-          // Seleccionar la solicitud asociada si es única
-          if (data.solicitud_seleccionada) {
-            sel.value = data.solicitud_seleccionada.id;
-          } else {
-            sel.value = ''; // Sin selección si no hay una única o hay múltiples
-          }
-
-          // Mostrar advertencia si existe
           if (data.advertencia) {
-            if (warningDiv) {
-              warningDiv.textContent = data.advertencia;
-              warningDiv.classList.remove('hidden');
-            } else {
-              alert(data.advertencia);
-            }
+            warningDiv.textContent = data.advertencia;
+            warningDiv.classList.remove('hidden');
           } else {
-            if (warningDiv) warningDiv.classList.add('hidden');
+            warningDiv.classList.add('hidden');
           }
 
-          // Cargar campos adicionales
           fetch(`/api/obtener_campos_seriales/?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}&solicitud=${encodeURIComponent(data.solicitud_seleccionada?.id || '')}`)
             .then(r => r.json())
             .then(data => {
-              if (data.error) {
-                alert(data.error);
-                if (extras) extras.classList.add('hidden');
-                fields.forEach(el => el.value = '');
-                return;
-              }
-
-              // Rellena labels/valores de campo1..campo5
-              ['campo1', 'campo2', 'campo3', 'campo4', 'campo5'].forEach((c, i) => {
+              if (data.error) { alert(data.error); extras.classList.add('hidden'); return; }
+              ['campo1','campo2','campo3','campo4','campo5'].forEach((c, i) => {
                 const lbl = document.getElementById(`label_${c}`);
                 const inp = document.getElementById(`id_${c}`);
-                if (lbl) lbl.textContent = data[`nombre_campo${i + 1}`] || `Campo ${i + 1}`;
-                if (inp) inp.value = data[`valor_campo${i + 1}`] || '';
+                if (lbl) lbl.textContent = data[`nombre_campo${i+1}`] || `Campo ${i+1}`;
+                if (inp) inp.value = data[`valor_campo${i+1}`] || '';
               });
-
-              // Sincroniza estado
               const estadoSel = document.getElementById('id_estado');
-              if (estadoSel && data.estado) {
-                estadoSel.value = data.estado; // Asegurar que se aplique el valor real
-              }
-
-              if (extras) extras.classList.remove('hidden');
+              if (estadoSel && data.estado) estadoSel.value = data.estado;
+              extras.classList.remove('hidden');
             });
         })
-        .catch(err => {
-          console.error(err);
-          alert(err.message || 'Ocurrió un error al cargar los campos. Inténtelo de nuevo.');
-          if (extras) extras.classList.add('hidden');
-          fields.forEach(el => el.value = '');
-          sel.value = '';
-          if (warningDiv) warningDiv.classList.add('hidden');
-        });
+        .catch(err => { alert(err.message); extras.classList.add('hidden'); });
     });
   }
+
+  // ── MODO INTERNO ─────────────────────────────────────────────────────
+  const productoSel       = document.getElementById('si-producto-selector');
+  const serialesCont      = document.getElementById('si-seriales-container');
+  const serialMaestroSel  = document.getElementById('si-serial-maestro');
+  const totalInternos     = document.getElementById('si-total-internos');
+  const asignadosCont     = document.getElementById('si-asignados-container');
+  const tablaBody         = document.getElementById('si-tabla-body');
+  const totalAsignados    = document.getElementById('si-total-asignados');
+  const serialMaestroId   = document.getElementById('si-serial-maestro-id');
+
+  // Al elegir producto interno → cargar sus seriales
+  productoSel.addEventListener('change', function () {
+    const productoId = this.value;
+    serialesCont.classList.add('hidden');
+    asignadosCont.classList.add('hidden');
+    serialMaestroSel.innerHTML = '<option value="">— Seleccione un serial —</option>';
+
+    if (!productoId) return;
+
+    fetch(`/seriales/por-producto/${productoId}/`)
+      .then(r => r.json())
+      .then(data => {
+        data.seriales.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `Serial ${s.serial} — ${s.estado}`;
+          serialMaestroSel.appendChild(opt);
+        });
+        totalInternos.textContent = data.total;
+        serialesCont.classList.remove('hidden');
+      });
+  });
+
+  // Al elegir serial maestro → cargar seriales asignados
+  serialMaestroSel.addEventListener('change', function () {
+    const serialId = this.value;
+    asignadosCont.classList.add('hidden');
+    tablaBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-400">Cargando...</td></tr>';
+    serialMaestroId.value = serialId;
+
+    if (!serialId) return;
+
+    fetch(`/seriales/asignados-a/${serialId}/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.seriales.length === 0) {
+          tablaBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-400">Sin seriales asignados</td></tr>';
+          totalAsignados.textContent = '0';
+        } else {
+          tablaBody.innerHTML = data.seriales.map(s => `
+            <tr class="hover:bg-gray-50">
+              <td class="p-2 border-b font-mono">${s.serial}</td>
+              <td class="p-2 border-b">${s.producto}</td>
+              <td class="p-2 border-b">
+                <span class="px-2 py-0.5 rounded text-xs font-semibold
+                  ${s.estado === 'programado' ? 'bg-blue-100 text-blue-700' :
+                    s.estado === 'despachado' ? 'bg-green-100 text-green-700' :
+                    'bg-gray-100 text-gray-600'}">
+                  ${s.estado}
+                </span>
+              </td>
+              <td class="p-2 border-b text-gray-500 text-xs">${s.solicitud || '—'}</td>
+            </tr>
+          `).join('');
+          totalAsignados.textContent = data.seriales.length;
+        }
+        asignadosCont.classList.remove('hidden');
+      });
+  });
 });
 </script>
 {% endblock %}
-
-
 
 
 

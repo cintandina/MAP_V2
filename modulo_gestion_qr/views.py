@@ -33,6 +33,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 from django.views.generic import CreateView, TemplateView
 from django.views.generic.edit import UpdateView
+from urllib3 import request
 
 from .decorators import role_required
 from .forms import (
@@ -47,11 +48,9 @@ from .forms import (
     #UbicacionFormSet,
     UbicacionFormSet
 )
-from .models import Cliente, Entrega, Producto, Serial, Solicitud, TemplateCliente
+from .models import AsignacionSerialInterno, Cliente, Entrega, Producto, Serial, SerialInterno, Solicitud, TemplateCliente, AsignacionSerialCliente
 from .utils.entrega_docs import enviar_correo_entrega_sendgrid
 from django.db.models import Value
-
-
 
 
 from django.db.models import Max
@@ -76,6 +75,9 @@ def index(request):
 def home(request):
     return render(request, 'home.html')
 
+from django.db.models.functions import Cast
+from django.db.models import IntegerField
+
 @login_required
 @transaction.atomic
 @role_required('Gestión de Seriales')
@@ -88,20 +90,31 @@ def generar_seriales(request):
             cliente = form.cleaned_data['cliente']
             producto = form.cleaned_data['producto']
 
-            # Paso 1: Obtener último serial
-            ultimo_serial_obj = Serial.objects.aggregate(ultimo_serial=Max('serial'))
-            ultimo_serial = int(ultimo_serial_obj['ultimo_serial']) if ultimo_serial_obj['ultimo_serial'] else 0
+            # Paso 1: Obtener último serial FILTRADO POR PRODUCTO (cast a entero)
+            ultimo_serial_obj = Serial.objects.filter(
+                producto=producto
+            ).annotate(
+                serial_int=Cast('serial', IntegerField())
+            ).aggregate(ultimo_serial=Max('serial_int'))
 
-            # Paso 2: Reservar un rango suficientemente grande
+            ultimo_serial = ultimo_serial_obj['ultimo_serial'] or 0
+
+            # Paso 2: Reservar rango para ese producto
             rango_candidato = range(ultimo_serial + 1, ultimo_serial + 1 + (numero_seriales * 2))
 
-            # Paso 3: Identificar seriales ya existentes para evitar colisiones
+            # Paso 3: Colisiones solo para ese producto
             seriales_existentes = set(
-                Serial.objects.filter(serial__in=rango_candidato).values_list('serial', flat=True)
+                Serial.objects.filter(
+                    producto=producto,
+                    serial__in=[str(s) for s in rango_candidato]
+                ).values_list('serial', flat=True)
             )
 
-            # Paso 4: Filtrar seriales disponibles
-            seriales_validos = [s for s in rango_candidato if s not in seriales_existentes][:numero_seriales]
+            # Paso 4: Filtrar disponibles
+            seriales_validos = [
+                s for s in rango_candidato
+                if str(s) not in seriales_existentes
+            ][:numero_seriales]
 
             nuevos_seriales = []
             seriales_a_crear = []
@@ -110,7 +123,7 @@ def generar_seriales(request):
                 nueva_url = f"{settings.BASE_URL}/{cliente.slug}/qr/?qr={s}"
                 seriales_a_crear.append(
                     Serial(
-                        serial=s,
+                        serial=str(s),
                         cliente=cliente,
                         producto=producto,
                         url=nueva_url,
@@ -129,10 +142,10 @@ def generar_seriales(request):
                 messages.error(request, f"Ocurrió un error durante la creación masiva: {str(e)}")
                 return redirect('generar_seriales')
 
-            # Paso 6: Validar resultado y almacenar en sesión
+            # Paso 6: Validar y almacenar en sesión
             if len(nuevos_seriales) < numero_seriales:
                 messages.warning(request, "No se pudieron generar todos los seriales por conflictos. Intenta de nuevo.")
-            
+
             request.session['nuevos_seriales'] = nuevos_seriales
             return redirect('serial_success')
 
@@ -519,8 +532,10 @@ def asociar_seriales(request):
 
     return render(request, 'asociar_seriales.html', {
         'form': form,
+        'todos_productos': Producto.objects.all().select_related('cliente'),
+        'todas_solicitudes': Solicitud.objects.all().order_by('-fecha_creacion'),
+        'estados': Serial.ESTADO_CHOICES,
     })
-
 
 # --- NUEVO: inferir la solicitud a partir del rango ---
 
@@ -1158,3 +1173,167 @@ def buscar_nit(request):
 
     except Solicitud.DoesNotExist:
         return JsonResponse({'existe': False})
+    
+    # Vista manejo de seriales internos (asociar seriales cliente a serial interno para gestión de entregas)
+@login_required
+@role_required('Gestión de Seriales')
+@transaction.atomic
+def asignar_seriales_interno(request):
+    if request.method == 'POST':
+        serial_interno_id = request.POST.get('serial_interno')
+        producto_id = request.POST.get('producto')
+        desde = request.POST.get('desde')
+        hasta = request.POST.get('hasta')
+
+        if not all([serial_interno_id, producto_id, desde, hasta]):
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect('asignar_serial_interno')
+
+        try:
+            serial_maestro = Serial.objects.get(id=serial_interno_id)
+            producto = Producto.objects.get(id=producto_id)
+            desde_int = int(desde)
+            hasta_int = int(hasta)
+        except (Serial.DoesNotExist, Producto.DoesNotExist, ValueError):
+            messages.error(request, "Datos inválidos.")
+            return redirect('asignar_serial_interno')
+
+        seriales_cliente = Serial.objects.annotate(
+            serial_int=Cast('serial', IntegerField())
+        ).filter(
+            producto=producto,
+            serial_int__gte=desde_int,
+            serial_int__lte=hasta_int
+        )
+
+        if not seriales_cliente.exists():
+            messages.error(request, "No se encontraron seriales en ese rango.")
+            return redirect('asignar_serial_interno')
+
+        asignados = []
+        for sc in seriales_cliente:
+            asignacion, created = AsignacionSerialCliente.objects.get_or_create(
+                serial_maestro=serial_maestro,
+                serial_asignado=sc,
+                defaults={'asignado_por': request.user}
+            )
+            if created:
+                asignados.append(sc.serial)
+
+        messages.success(request, f"Se asignaron {len(asignados)} seriales al serial {serial_maestro.serial}.")
+        return redirect('asignar_serial_interno')
+
+    # GET
+    seriales_internos = Serial.objects.none()  # vacío hasta que se elija producto interno
+    productos = Producto.objects.all().select_related('cliente')
+    todos_productos = Producto.objects.all().select_related('cliente')
+
+    return render(request, 'asignar_seriales_interno.html', {
+        'seriales_internos': seriales_internos,
+        'productos': productos,
+        'todos_productos': todos_productos,
+    })
+            
+    
+@login_required
+@role_required('Gestión de Seriales')
+def seriales_por_producto(request, producto_id):
+    try:
+        producto = Producto.objects.get(id=producto_id)
+    except Producto.DoesNotExist:
+        return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+
+    seriales = Serial.objects.filter(
+        producto=producto
+    ).annotate(
+        serial_int=Cast('serial', IntegerField())
+    ).order_by('serial_int').values('id', 'serial', 'estado')  
+    seriales_list = list(seriales)
+    return JsonResponse({
+        'producto': producto.nombre,
+        'seriales': seriales_list,
+        'total': len(seriales_list)
+    })
+
+def landing_serial_interno(request, serial_interno):
+
+    serial_int = get_object_or_404(SerialInterno, serial=serial_interno)
+
+    # buscar seriales de cliente asociados
+    asignaciones = AsignacionSerialInterno.objects.filter(
+        serial_interno=serial_int
+    ).select_related('serial_cliente')
+
+    return render(
+        request,
+        'landing/landing_serial_interno.html',
+        {
+            "serial_interno": serial_int,
+            "asignaciones": asignaciones
+        }
+    )
+    
+@login_required
+@role_required('Gestión de Seriales')
+def seriales_asignados_a(request, serial_id):
+    try:
+        serial_maestro = Serial.objects.get(id=serial_id)
+    except Serial.DoesNotExist:
+        return JsonResponse({'error': 'Serial no encontrado'}, status=404)
+
+    asignaciones = AsignacionSerialCliente.objects.filter(
+        serial_maestro=serial_maestro
+    ).select_related('serial_asignado__producto')
+
+    seriales = [
+        {
+            'serial': a.serial_asignado.serial,
+            'producto': a.serial_asignado.producto.nombre,
+            'estado': a.serial_asignado.estado,
+            'solicitud': a.serial_asignado.solicitud.codigo if a.serial_asignado.solicitud else None,
+        }
+        for a in asignaciones
+    ]
+
+    return JsonResponse({'seriales': seriales, 'total': len(seriales)})
+
+
+@login_required
+@role_required('Gestión de Seriales')
+@transaction.atomic
+def asociar_por_serial_interno(request):
+    if request.method == 'POST':
+        serial_maestro_id = request.POST.get('serial_maestro_id')
+        solicitud_id = request.POST.get('solicitud_id')
+        estado = request.POST.get('estado', 'programado')
+
+        if not all([serial_maestro_id, solicitud_id]):
+            messages.error(request, "Faltan datos obligatorios.")
+            return redirect('asociar_seriales')
+
+        try:
+            serial_maestro = Serial.objects.get(id=serial_maestro_id)
+            solicitud = Solicitud.objects.get(id=solicitud_id)
+        except (Serial.DoesNotExist, Solicitud.DoesNotExist):
+            messages.error(request, "Serial o solicitud no encontrados.")
+            return redirect('asociar_seriales')
+
+        # Obtener todos los seriales asignados a este maestro
+        asignaciones = AsignacionSerialCliente.objects.filter(
+            serial_maestro=serial_maestro
+        ).select_related('serial_asignado')
+
+        seriales_ids = [a.serial_asignado.id for a in asignaciones]
+
+        actualizados = Serial.objects.filter(id__in=seriales_ids).update(
+            solicitud=solicitud,
+            estado=estado
+        )
+
+        messages.success(
+            request,
+            f"Se asociaron {actualizados} seriales a la solicitud {solicitud.codigo}."
+        )
+        return redirect('asociar_seriales')
+
+    return redirect('asociar_seriales')
