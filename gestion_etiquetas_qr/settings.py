@@ -177,21 +177,42 @@ TEMPLATES = [
 WSGI_APPLICATION = 'gestion_etiquetas_qr.wsgi.application'
 
 # Configuración de base de datos
-if ENVIRONMENT == 'production':
-    DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, default=os.getenv('DATABASE_URL'))
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+#if ENVIRONMENT == 'production':
+ #   DATABASES = {
+  #      'default': dj_database_url.config(conn_max_age=600, default=os.getenv('DATABASE_URL'))
+  #  }
+#else:
+ #   DATABASES = {
+  #      'default': {
+   #         'ENGINE': 'django.db.backends.sqlite3',
+    #        'NAME': BASE_DIR / 'db.sqlite3',
            # 'ENGINE': 'django.db.backends.postgresql',
             #'NAME': 'gestion_etiquetas_qr',
             #'USER': 'postgres',
             #'PASSWORD': '2024',
             #'HOST': 'localhost',
             #'PORT': '5432',
+     #   }
+    #}
+    
+DATABASE_URL = (
+    os.getenv("STACKHERO_POSTGRESQL_DATABASE_URL")
+    or os.getenv("DATABASE_URL")
+)
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         }
     }
 
