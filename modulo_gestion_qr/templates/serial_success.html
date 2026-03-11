@@ -1,32 +1,30 @@
 <!DOCTYPE html>
 {% extends "_base.html" %}
 
-{% block title %}
-URLs Generadas
-{% endblock %}
+{% block title %}URLs Generadas{% endblock %}
 
 {% block content %}
-<div class="flex justify-center items-center min-h-screen bg-gray-100">
-    <div class="bg-white p-6 md:p-8 rounded-lg shadow-lg w-full">
+<div class="flex justify-center items-start min-h-screen bg-gray-100 py-10">
+    <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-6xl">
         <h1 class="text-3xl font-bold text-green-700 text-center mb-8">URLs Generadas</h1>
 
         {% if seriales %}
-            <div class="overflow-x-auto">
-                <table class="table-auto w-full border-collapse border border-gray-200 rounded-lg">
+            <div class="overflow-x-auto mb-6">
+                <table class="table-auto w-full border border-gray-300 rounded-lg">
                     <thead>
-                        <tr class="bg-green-600 text-white">
-                            <th class="px-4 py-2 text-left">Serial</th>
-                            <th class="px-4 py-2 text-left">URL</th>
-                            <th class="px-4 py-2 text-left">Estado</th>
-                            <th class="px-4 py-2 text-left">Fecha de Creación</th>
+                        <tr class="bg-green-600 text-white uppercase text-sm">
+                            <th class="px-6 py-3 text-left">Serial</th>
+                            <th class="px-6 py-3 text-left">URL</th>
+                            <th class="px-6 py-3 text-left">Estado</th>
+                            <th class="px-6 py-3 text-left">Fecha de Creación</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="text-gray-700">
                         {% for item in seriales %}
-                            <tr class="border-b border-gray-200">
-                                <td class="px-4 py-2">{{ item.serial }}</td>
-                                <td class="px-4 py-2">
-                                    <a href="{{ item.url }}" class="text-blue-600 underline" target="_blank">
+                            <tr class="border-b border-gray-200 hover:bg-green-50">
+                                <td class="px-4 py-2 font-medium">{{ item.serial }}</td>
+                                <td class="px-4 py-2 break-all">
+                                    <a href="{{ item.url }}" class="text-blue-600 underline hover:text-blue-800" target="_blank">
                                         {{ item.url }}
                                     </a>
                                 </td>
@@ -37,12 +35,115 @@ URLs Generadas
                     </tbody>
                 </table>
             </div>
+
+            <!-- FORMULARIO PROCESAR/DESCARGAR -->
+            <form method="POST" action="{% url 'exportar_csv_personalizado' %}" class="bg-gray-50 p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-5 gap-4 items-end mb-6">
+                {% csrf_token %}
+                {% for item in seriales %}
+                    <input type="hidden" name="urls[]" value="{{ item.url }}">
+                    <input type="hidden" name="seriales[]" value="{{ item.serial }}">
+                {% endfor %}
+
+                <div class="flex flex-col">
+                    <label class="mb-1 font-semibold text-gray-700">Modo</label>
+                    <select name="modo" class="border rounded px-3 py-2">
+                        <option value="consecutivo">Consecutivo</option>
+                        <option value="repeticiones">Repeticiones</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="mb-1 font-semibold text-gray-700">Repeticiones / Cada N Filas</label>
+                    <input type="number" name="repeticiones" value="1" class="border rounded px-3 py-2">
+                </div>
+
+                <div class="flex flex-col">
+                    <label class="mb-1 font-semibold text-gray-700">Ceros por bloque</label>
+                    <input type="number" name="ceros" value="0" class="border rounded px-3 py-2">
+                </div>
+
+                <!-- Codigo para colocar ceros a la izquierda, pero no se implementó 
+                <div class="flex flex-col">
+                    <label class="mb-1 font-semibold text-gray-700">Dígitos (padding)</label>
+                    <input type="number" name="digitos" value="0" class="border rounded px-3 py-2">
+                </div>-->
+
+                <div class="flex flex-col">
+                    <button type="submit" name="accion" value="descargar" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                        Descargar CSV
+                    </button>
+                </div>
+            </form>
+
+          <!--  <form method="POST" action="{% url 'generar_acta' %}">
+                {% csrf_token %}
+
+                {% for item in seriales %}
+                    <input type="hidden" name="seriales[]" value="{{ item.serial }}">
+                {% endfor %}
+
+                <button type="submit">
+                    Descargar Acta
+                </button>
+
+            </form>-->
+
+            {% if seriales_procesados %}
+                <div class="bg-white border border-gray-300 rounded-lg p-4 shadow-sm">
+                    <h3 class="font-bold text-lg mb-2">Seriales Procesados</h3>
+                    <ul class="list-disc list-inside text-gray-700">
+                        {% for s in seriales_procesados %}
+                            <li>{{ s }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
         {% else %}
-            <p class="text-center text-gray-600 mt-4">No se generaron seriales.</p>
+            <p class="text-center text-gray-500 mt-6">No se generaron seriales.</p>
         {% endif %}
+        
     </div>
 </div>
+
+<script>
+document.getElementById("btnActaEntrega").addEventListener("click", function() {
+
+    const codigo = "{{ seriales.0.serial }}"
+    const cliente = "{{ seriales.0.url }}"
+
+    const formData = new FormData()
+    formData.append("codigo", codigo)
+    formData.append("cliente", cliente)
+
+    fetch("{% url 'generar_acta' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        const binary = atob(data.base64)
+
+        const bytes = new Uint8Array(binary.length)
+
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i)
+        }
+
+        const blob = new Blob([bytes], {type: "application/pdf"})
+
+        const link = document.createElement("a")
+        link.href = URL.createObjectURL(blob)
+        link.download = data.nombre
+        link.click()
+
+    })
+
+})
+
+</script>
 {% endblock %}
-
-
-

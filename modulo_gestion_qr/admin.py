@@ -59,6 +59,9 @@ class SerialAdmin(admin.ModelAdmin):
     list_display = ('serial', 'cliente', 'producto', 'url')
     search_fields = ('serial',)
     list_filter = ('cliente', 'producto')
+    list_per_page = 50  # menos registros por página
+    list_select_related = True
+    show_full_result_count = False # No mostrar el conteo total para mejorar rendimiento
 
 
 @admin.register(TemplateCliente)

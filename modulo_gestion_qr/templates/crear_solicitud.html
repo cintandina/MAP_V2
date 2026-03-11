@@ -483,6 +483,11 @@ input, textarea, select {
     </div>
 
     <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 gap-6">
+
+      {% if serial_qr %}
+        <input type="hidden" name="serial_qr" value="{{ serial_qr }}" />
+      {% endif %}
+
       {% csrf_token %}
       <!-- ID oculto para saber si se edita una solicitud existente -->
       <input type="hidden" id="solicitud-id-hidden" name="solicitud_id" value="">

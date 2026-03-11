@@ -1,0 +1,132 @@
+{% load static %}
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+
+@page {
+    size: A4;
+    margin: 10mm;
+}
+
+body{
+    font-family: Helvetica, Arial, sans-serif;
+    margin: 30px;
+    color:#222;
+}
+
+h1{
+    text-align:center;
+    color:#1f3a63;
+    font-size:20px;
+}
+
+h2{
+    font-size:14px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th,td{
+    border:1px solid #555;
+    padding:6px;
+    text-align:center;
+}
+
+th{
+    background:#e8e8e8;
+}
+
+</style>
+
+</head>
+<body>
+
+<table class="encabezado">
+<tr>
+
+<td style="width:15%">
+<img src="{{ request.build_absolute_uri }}{% static 'images/logo_old.jpg' %}" width="60">
+</td>
+
+<td style="width:60%" class="titulo">
+FORMATO DE ENTREGA SERIALES PARA EQUIPO DOMINO
+</td>
+
+<td style="width:25%" class="detalle">
+Código: DG-IA-02-F01<br>
+Edición: 01<br>
+Fecha: 20/10/2025
+</td>
+
+</tr>
+</table>
+
+<h2>Santiago de Cali, {{ fecha }}</h2>
+
+<h1>ACTA DE ENTREGA</h1>
+
+<p>Señores<br><b>PRODUCCIÓN LINEA NO TRADICIONAL</b></p>
+
+<p>
+A continuación se relacionan los seriales que ingresan a impresión de la Cinta de Empaque Inteligente (QR)
+</p>
+
+<table>
+
+<tr>
+<th>Código Arte</th>
+<th>Cliente</th>
+<th>Serial Inicio</th>
+<th>Serial Final</th>
+<th>Códigos Únicos</th>
+<th>Repeticiones por Rollo</th>
+<th>Ceros por bloque</th>
+</tr>
+
+<tr>
+<td>{{ codigo }}</td>
+<td>{{ cliente }}</td>
+<td>{{ serial_inicio }}</td>
+<td>{{ serial_final }}</td>
+<td>{{ codigos_unicos }}</td>
+<td>{{ repeticiones }}</td>
+<td>{{ ceros }}</td>
+</tr>
+
+</table>
+
+<table style="width:100%; margin-top:80px;">
+<tr>
+<td style="width:50%; text-align:center">
+
+<b>Entrega</b>
+<br><br><br><br>
+____________________
+<br>
+Equipo Diseño
+
+</td>
+
+<td style="width:50%; text-align:center">
+
+<b>Recibe</b>
+<br><br><br><br>
+____________________
+<br>
+Producción Línea No Tradicional
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>

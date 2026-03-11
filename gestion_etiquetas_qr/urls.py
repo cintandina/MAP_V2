@@ -71,7 +71,9 @@ urlpatterns = [
     path('seriales/por-producto/<int:producto_id>/', views.seriales_por_producto, name='seriales_por_producto'),
     path('seriales/asignados-a/<int:serial_id>/', views.seriales_asignados_a, name='seriales_asignados_a'),
     path('asociar/por-serial-interno/', views.asociar_por_serial_interno, name='asociar_por_serial_interno'),
-
+    path('exportar-seriales/', views.exportar_csv, name='exportar_csv'),
+    path('exportar_csv_personalizado/', views.exportar_csv_personalizado, name='exportar_csv_personalizado'),
+    path("generar-acta/", views.generar_acta, name="generar_acta"),
    
     path('<slug:cliente_slug>/', views.crear_template_cliente, name='template_cliente'),
 

@@ -49,8 +49,9 @@ class Serial(models.Model):
     ESTADO_CHOICES = [
         ('programado', 'Programado'),
         ('en_proceso', 'En Proceso'),
+        ('en_bodega', 'En Bodega - listo para despacho'),
         ('despachado', 'Despachado - listo para distribución'),
-        ('distribucion', 'Distribución'),
+        ('Activado', 'Activado - entregado al cliente'),
         ('cancelado', 'Cancelado'),
     ]
 
@@ -302,3 +303,5 @@ class AsignacionSerialCliente(models.Model):
 
     def __str__(self):
         return f"{self.serial_maestro.serial} → {self.serial_asignado.serial}"
+    
+

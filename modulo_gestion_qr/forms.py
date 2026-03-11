@@ -62,12 +62,20 @@ class CustomLoginForm(AuthenticationForm):
 
 
 class AsociarSerialesForm(forms.Form):
+    producto = forms.ModelChoiceField(
+        queryset=Producto.objects.all(),
+        label='Producto',
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500',
+        })
+    )
     desde = forms.CharField(label='Serial inicial', max_length=100)
     hasta = forms.CharField(label='Serial final', max_length=100)
     solicitud = forms.ModelChoiceField(
         queryset=Solicitud.objects.all(),
         label='Solicitud',
-        required=True,  
+        required=True,
         widget=forms.Select(attrs={
             'class': 'block w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-green-500 focus:border-green-500',
         })
@@ -77,7 +85,6 @@ class AsociarSerialesForm(forms.Form):
     campo3 = forms.CharField(label='Campo 3', widget=forms.Textarea, required=False)
     campo4 = forms.CharField(label='Campo 4', widget=forms.Textarea, required=False)
     campo5 = forms.CharField(label='Campo 5', widget=forms.Textarea, required=False)
-    
     estado = forms.ChoiceField(
         label='Estado',
         choices=Serial.ESTADO_CHOICES,
@@ -86,40 +93,35 @@ class AsociarSerialesForm(forms.Form):
         })
     )
 
-
-
     def clean(self):
         cleaned_data = super().clean()
         desde = cleaned_data.get("desde")
         hasta = cleaned_data.get("hasta")
-        solicitud = cleaned_data.get("solicitud")
+        producto = cleaned_data.get("producto")
 
-        if desde and hasta:
-            # Validar que los seriales sean válidos
+        if desde and hasta and producto:
             try:
-                # Convertir a enteros para comparar el rango
                 desde_int = int(desde.lstrip('0') or '0')
                 hasta_int = int(hasta.lstrip('0') or '0')
                 if hasta_int < desde_int:
-                    raise forms.ValidationError({
-                        'hasta': "El valor 'Hasta' debe ser mayor o igual que 'Desde'."
-                    })
+                    raise forms.ValidationError({'hasta': "El valor 'Hasta' debe ser mayor o igual que 'Desde'."})
             except ValueError:
                 raise forms.ValidationError("Los seriales deben ser valores numéricos válidos.")
 
-            # Calcular el número de seriales en el rango
             total_seriales_en_rango = (hasta_int - desde_int) + 1
             seriales_encontrados = Serial.objects.filter(
-                serial__gte=desde, serial__lte=hasta
+                producto=producto,
+                serial__gte=desde,
+                serial__lte=hasta
             ).count()
 
             if seriales_encontrados != total_seriales_en_rango:
                 raise forms.ValidationError(
-                    f"El rango especificado ({desde} - {hasta}) no es válido o contiene {seriales_encontrados} seriales en lugar de los {total_seriales_en_rango} esperados."
+                    f"El rango ({desde} - {hasta}) contiene {seriales_encontrados} seriales "
+                    f"en lugar de los {total_seriales_en_rango} esperados para el producto seleccionado."
                 )
 
         return cleaned_data
-
 
 
 class ProductoUpdateForm(forms.ModelForm):
@@ -361,3 +363,5 @@ class EntregaForm(forms.ModelForm):
             'foto': forms.ClearableFileInput(attrs={'accept': 'image/*'}),
             'firma': forms.ClearableFileInput(attrs={'accept': 'image/*'}),
         }
+
+
