@@ -117,7 +117,14 @@ class TemplateCliente(models.Model):
 # En modulo_gestion_qr/models.py
 class Solicitud(models.Model):
     codigo = models.CharField(max_length=20, unique=True, blank=True)
-    logo = models.ImageField(upload_to='logos_empresas/', blank=True, null=True)
+    from cloudinary_storage.storage import MediaCloudinaryStorage
+
+    logo = models.ImageField(
+        upload_to='logos_empresas/',
+        storage=MediaCloudinaryStorage(),
+        blank=True,
+        null=True
+    )
     sobre_nosotros = models.TextField(blank=True)
     razon_social = models.CharField(max_length=255)
     nit = models.CharField(max_length=50)
