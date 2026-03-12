@@ -93,7 +93,8 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:8000']
 if ENVIRONMENT == 'production':
     CSRF_TRUSTED_ORIGINS += [
         'https://qr-sb.cintandina.com',
-        'https://map-cintandina-ff394dd39613.herokuapp.com'
+        'https://map-cintandina-ff394dd39613.herokuapp.com',
+        'https://map2-92acbf23ea36.herokuapp.com',  
     ]
 
 
