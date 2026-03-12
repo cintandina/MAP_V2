@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
-
+import cloudinary
 
 
 # BASE_DIR
@@ -140,6 +140,17 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'storages',
 ]
+
+INSTALLED_APPS += ['cloudinary_storage', 'cloudinary']
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
+
+if not USE_S3:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Middleware
 MIDDLEWARE = [
