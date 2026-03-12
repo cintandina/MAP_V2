@@ -71,7 +71,10 @@ LOGGING = {
 }
 
 # Configurar ALLOWED_HOSTS
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'map-cintandina-ff394dd39613.herokuapp.com']
+ALLOWED_HOSTS = ['localhost',
+    '127.0.0.1',
+    'map-cintandina-ff394dd39613.herokuapp.com',
+    'map2-92acbf23ea36.herokuapp.com',]
 if ENVIRONMENT == 'production':
     ALLOWED_HOSTS.extend([
         'qr-sb.cintandina.com',
